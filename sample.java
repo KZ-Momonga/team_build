@@ -4,7 +4,7 @@ public class sample {
         String word_i = "今までの朝とは様子が違う";
         String word_u = "嬉しくない知らせが飛び込んできた";
         String word_e = "駅で急に60分遅れの遅延発生。";
-        String word_o = "終わった家に帰りましょう";
+        String word_o = "終わった家に帰りましょう。";
 
         System.out.println("あ：" + word_a);
         System.out.println("い：" + word_i);
