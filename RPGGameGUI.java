@@ -775,7 +775,7 @@ public class RPGGameGUI extends JFrame {
             } else if (room.hasTreasure) {
                 appendColoredText("【宝箱を見つけた！】\n", Color.YELLOW, 22);
                 Random rand = new Random();
-                int treasureType = rand.nextInt(4); // 0,1,2,3の4種類に拡張
+                int treasureType = rand.nextInt(7); // 0,1,2,3の4種類に拡張
                 String result = "";
                 switch (treasureType) {
                     case 0:
@@ -796,6 +796,21 @@ public class RPGGameGUI extends JFrame {
                         Weapon apprenticeStaff = new Weapon("見習いの杖", 12);
                         player.weapons.add(apprenticeStaff);
                         result = "新しい武器「見習いの杖」を手に入れた！";
+                        break;
+                    case 4:
+                        Weapon wizardStaff = new Weapon("魔法使いの杖", 20);
+                        player.weapons.add(wizardStaff);
+                        result = "新しい武器「魔法使いの杖」を手に入れた！";
+                        break;
+                    case 5:
+                        Weapon ironWeapon = new Weapon("鉄の剣", 30);
+                        player.weapons.add(ironWeapon);
+                        result = "新しい武器「鉄の剣」を手に入れた！";
+                        break;
+                    case 6:
+                        Armor ironArmor = new Armor("鉄の鎧", 20, 50);
+                        player.armors.add(ironArmor);
+                        result = "新しい防具「鉄の鎧」を手に入れた！";
                         break;
                 }
                 appendColoredText(result + "\n", Color.YELLOW, 22);
@@ -856,6 +871,39 @@ public class RPGGameGUI extends JFrame {
             setActionButtonsEnabled(false);
             setMoveButtonsEnabled(true);
             enemyImageLabel.setVisible(false); // ★画像非表示
+
+            // ★ここから装備ドロップ処理
+            Random rand = new Random();
+            int dropChance = rand.nextInt(100);
+            String dropResult = null;
+            if (dropChance < 30) { // 40%の確率でドロップ
+                int itemType = rand.nextInt(4); // 0:武器1, 1:武器2, 2:防具1, 3:防具2
+                switch (itemType) {
+                    case 0:
+                        Weapon ironSword = new Weapon("鉄の剣", 30);
+                        player.weapons.add(ironSword);
+                        dropResult = "モンスターが「鉄の剣」を落とした！";
+                        break;
+                    case 1:
+                        Weapon wizardStaff = new Weapon("魔法使いの杖", 20);
+                        player.weapons.add(wizardStaff);
+                        dropResult = "モンスターが「魔法使いの杖」を落とした！";
+                        break;
+                    case 2:
+                        Armor ironArmor = new Armor("鉄の鎧", 20, 50);
+                        player.armors.add(ironArmor);
+                        dropResult = "モンスターが「鉄の鎧」を落とした！";
+                        break;
+                    case 3:
+                        Armor silverArmor = new Armor("銀の鎧", 10, 30);
+                        player.armors.add(silverArmor);
+                        dropResult = "モンスターが「銀の鎧」を落とした！";
+                        break;
+                }
+                appendColoredText(dropResult + "\n", Color.ORANGE, 18);
+            }
+            // ★ここまで
+
         } else {
             actionPanel.setVisible(true);
             setActionButtonsEnabled(true);
