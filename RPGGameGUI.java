@@ -27,6 +27,8 @@ class Character {
     List<String> inventory = new ArrayList<>();
     List<Weapon> weapons = new ArrayList<>();
     List<Armor> armors = new ArrayList<>();
+    boolean isPoisoned = false;
+    int poisonTurn = 0;
 
     Character(String name, Job job) {
         this.name = name;
@@ -52,6 +54,16 @@ class Character {
         }
         learnInitialSkills();
     }
+    
+    void onTurnStart() {
+    if (isPoisoned) {
+        health -= 5;
+        poisonTurn--;
+        if (poisonTurn <= 0) {
+            isPoisoned = false;
+        }
+    }
+}
 
     void learnInitialSkills() {
         if (job == Job.騎士) {
@@ -114,6 +126,12 @@ class Character {
                 if (target != null) {
                     int dmg = attackPower + magicPower + weaponMagic + 15;
                     target.health -= dmg;
+                    // 20%の確率で燃焼付与
+                    if (new Random().nextInt(100) < 20) {
+                        target.isPoisoned = true;
+                        target.poisonTurn = 3;
+                        return name + "はファイアボールで" + target.name + "に" + dmg + "ダメージ！さらに燃焼状態にした！";
+                    }
                     return name + "はファイアボールで" + target.name + "に" + dmg + "ダメージ！";
                 }
                 break;
@@ -210,6 +228,8 @@ class Enemy {
     int maxHealth;
     int attackPower;
     int defense; // ★防御力フィールドを追加
+    boolean isPoisoned = false;
+　　int poisonTurn = 0;
 
     Enemy(String name, int level) {
         this.name = name;
@@ -231,6 +251,16 @@ class Enemy {
     boolean isAlive() {
         return health > 0;
     }
+    
+    void onTurnStart() {
+    if (isPoisoned) {
+        health -= 5;
+        poisonTurn--;
+        if (poisonTurn <= 0) {
+            isPoisoned = false;
+        }
+    }
+}
 }
 
 class InventoryDialog extends JDialog {
