@@ -2,7 +2,6 @@ import javax.swing.*;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
-
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
@@ -303,10 +302,36 @@ class Room {
     }
 }
 
+// ★JTextPaneのサブクラス
+class ImageBackgroundTextPane extends JTextPane {
+    private Image backgroundImage;
+
+    public ImageBackgroundTextPane(String imagePath) {
+        try {
+            backgroundImage = new ImageIcon(imagePath).getImage();
+        } catch (Exception e) {
+            backgroundImage = null;
+        }
+        setOpaque(false); // 背景透過
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        if (backgroundImage != null) {
+            // パネルサイズに合わせてリサイズ描画
+            g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        }
+        super.paintComponent(g);
+    }
+}
+
 public class RPGGameGUI extends JFrame {
+    private static final int GAME_AREA_WIDTH = 800;
+    private static final int GAME_AREA_HEIGHT = 400;
+
     // クラスのフィールドとして宣言
-    private JTextField nameField;
-    private JButton startButton;
+    // private JTextField nameField;
+    // private JButton startButton;
     private JTextPane gameArea; // ←型をJTextPaneに変更
     private Character player;
     private List<Enemy> enemies = new ArrayList<>();
@@ -333,12 +358,12 @@ public class RPGGameGUI extends JFrame {
     private JLabel armorLabel;
     private JButton equipWeaponButton;
     private JButton equipArmorButton;
-    private JLabel enemyImageLabel; // ★画像表示用ラベルを追加
+    private JLabel goblinImageLabel; // ゴブリン画像用ラベル
 
     // コンストラクタ内で初期化
     public RPGGameGUI() {
         setTitle("RPGゲーム");
-        setSize(1500, 800);
+        setSize(800, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -347,15 +372,15 @@ public class RPGGameGUI extends JFrame {
         JPanel panel = new JPanel();
         panel.setLayout(new GridLayout(6, 1)); // 行数を1つ増やす
 
-        panel.add(new JLabel("キャラクターの名前を入力してください:"));
-        nameField = new JTextField();
-        panel.add(nameField);
+        // panel.add(new JLabel("キャラクターの名前を入力してください:"));
+        // nameField = new JTextField();
+        // panel.add(nameField);
         // 職業選択
-        JComboBox<String> jobBox = new JComboBox<>(new String[] { "騎士", "魔法使い" });
-        panel.add(new JLabel("職業を選択してください:"));
-        panel.add(jobBox);
-        startButton = new JButton("ゲーム開始");
-        panel.add(startButton);
+        // JComboBox<String> jobBox = new JComboBox<>(new String[] { "騎士", "魔法使い" });
+        // panel.add(new JLabel("職業を選択してください:"));
+        // panel.add(jobBox);
+        // startButton = new JButton("ゲーム開始");
+        // panel.add(startButton);
 
         // ★装備表示用パネルを作成し、横並びでまとめる
         weaponLabel = new JLabel("武器: ");
@@ -400,39 +425,54 @@ public class RPGGameGUI extends JFrame {
 
         add(wrapperPanel, BorderLayout.NORTH);
 
-        // gameArea = new JTextArea();
-        // gameArea.setEditable(false);
-        // add(new JScrollPane(gameArea), BorderLayout.CENTER);
+        // 1. 背景画像ラベルを作成
+        JLabel backgroundLabel = new JLabel(new ImageIcon("背景.jpg"));
+        backgroundLabel.setBounds(0, 0, GAME_AREA_WIDTH, GAME_AREA_HEIGHT);
 
+        // 2. gameAreaは普通のJTextPaneでOK
         gameArea = new JTextPane();
         gameArea.setEditable(false);
         gameArea.setFocusable(false);
-        gameArea.setBackground(Color.WHITE);
+        gameArea.setOpaque(false); // 透明
+        gameArea.setBackground(new Color(0, 0, 0, 0));
+        gameArea.setPreferredSize(new Dimension(GAME_AREA_WIDTH, GAME_AREA_HEIGHT));
+
         JScrollPane scrollPane = new JScrollPane(gameArea);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setBounds(0, 0, GAME_AREA_WIDTH, GAME_AREA_HEIGHT);
 
-        // ★画像ラベルの初期化を先に行う
-        enemyImageLabel = new JLabel();
-        enemyImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        enemyImageLabel.setVisible(false); // 最初は非表示
+        // goblinImageLabelの初期化はそのまま
+        goblinImageLabel = new JLabel();
+        goblinImageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        goblinImageLabel.setOpaque(false);
+        goblinImageLabel.setVisible(false);
+        goblinImageLabel.setBounds(GAME_AREA_WIDTH / 2 - 60, 40, 120, 120);
 
-        // ★画像ラベルをgameAreaの上に配置
+        // 3. JLayeredPaneで重ねる
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.setPreferredSize(new Dimension(GAME_AREA_WIDTH, GAME_AREA_HEIGHT));
+        layeredPane.add(backgroundLabel, Integer.valueOf(0)); // 背景
+        layeredPane.add(scrollPane, Integer.valueOf(1)); // テキスト
+        layeredPane.add(goblinImageLabel, Integer.valueOf(2));// 敵画像
+
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.add(enemyImageLabel, BorderLayout.NORTH);
-        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        centerPanel.add(layeredPane, BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
 
-        startButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                String playerName = nameField.getText();
-                if (playerName.isEmpty()) {
-                    JOptionPane.showMessageDialog(RPGGameGUI.this, "名前を入力してください。", "エラー", JOptionPane.ERROR_MESSAGE);
-                } else {
-                    // 選択された職業に応じてJobを設定
-                    Job selectedJob = jobBox.getSelectedIndex() == 0 ? Job.騎士 : Job.魔法使い;
-                    startGame(playerName, selectedJob);
-                }
-            }
-        });
+        // startButton.addActionListener(new ActionListener() {
+        // public void actionPerformed(ActionEvent e) {
+        // String playerName = nameField.getText();
+        // if (playerName.isEmpty()) {
+        // JOptionPane.showMessageDialog(RPGGameGUI.this, "名前を入力してください。", "エラー",
+        // JOptionPane.ERROR_MESSAGE);
+        // } else {
+        // // 選択された職業に応じてJobを設定
+        // Job selectedJob = jobBox.getSelectedIndex() == 0 ? Job.騎士 : Job.魔法使い;
+        // startGame(playerName, selectedJob);
+        // }
+        // }
+        // });
 
         // 行動選択パネルの設定
         actionPanel = new JPanel();
@@ -444,19 +484,19 @@ public class RPGGameGUI extends JFrame {
                 if (!enemies.isEmpty()) {
                     Enemy enemy = enemies.get(0); // 最初の敵を選ぶ
                     player.attack(enemy);
-                    appendColoredText(player.name + "は" + enemy.name + "に攻撃した！\n", Color.BLACK);
-                    appendColoredText(enemy.name + "の現在の体力: " + enemy.health + "\n", Color.BLACK);
+                    appendColoredText(player.name + "は" + enemy.name + "に攻撃した！\n", Color.WHITE);
+                    appendColoredText(enemy.name + "の現在の体力: " + enemy.health + "\n", Color.WHITE);
 
                     if (!enemy.isAlive()) {
-                        appendColoredText(enemy.name + "を倒した！\n", Color.BLACK);
+                        appendColoredText(enemy.name + "を倒した！\n", Color.WHITE);
                         player.gainExperience(10);
                         enemies.remove(enemy);
                     }
 
                     if (enemy.isAlive()) {
                         enemy.attack(player);
-                        appendColoredText(enemy.name + "は" + player.name + "に攻撃した！\n", Color.BLACK);
-                        appendColoredText(player.name + "の現在の体力: " + player.health + "\n", Color.BLACK);
+                        appendColoredText(enemy.name + "は" + player.name + "に攻撃した！\n", Color.WHITE);
+                        appendColoredText(player.name + "の現在の体力: " + player.health + "\n", Color.WHITE);
                     }
                 }
                 checkGameStatus(); // ここだけでOK
@@ -467,8 +507,8 @@ public class RPGGameGUI extends JFrame {
         healButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 player.heal();
-                appendColoredText(player.name + "は回復した！\n", Color.BLACK);
-                appendColoredText(player.name + "の現在の体力: " + player.health + "\n", Color.BLACK);
+                appendColoredText(player.name + "は回復した！\n", Color.WHITE);
+                appendColoredText(player.name + "の現在の体力: " + player.health + "\n", Color.WHITE);
                 checkGameStatus(); // ここだけでOK
             }
         });
@@ -493,8 +533,8 @@ public class RPGGameGUI extends JFrame {
                         items[0]);
                 if (selected != null) {
                     player.useItem(selected);
-                    appendColoredText(player.name + "は" + selected + "を使用した！\n", Color.BLACK);
-                    appendColoredText(player.name + "の現在の体力: " + player.health + "\n", Color.BLACK);
+                    appendColoredText(player.name + "は" + selected + "を使用した！\n", Color.WHITE);
+                    appendColoredText(player.name + "の現在の体力: " + player.health + "\n", Color.WHITE);
                     checkGameStatus(); // ここだけでOK
                 }
             }
@@ -520,9 +560,9 @@ public class RPGGameGUI extends JFrame {
                 if (selectedSkill != null) {
                     Enemy target = enemies.isEmpty() ? null : enemies.get(0);
                     String result = player.useSkill(selectedSkill, target);
-                    appendColoredText(result + "\n", Color.BLACK);
+                    appendColoredText(result + "\n", Color.WHITE);
                     if (target != null && !target.isAlive()) {
-                        appendColoredText(target.name + "を倒した！\n", Color.BLACK);
+                        appendColoredText(target.name + "を倒した！\n", Color.WHITE);
                         player.gainExperience(10);
                         enemies.remove(target);
                     }
@@ -670,7 +710,7 @@ public class RPGGameGUI extends JFrame {
         appendColoredText("現在地: " + startRoom.description + "\n", Color.BLACK);
         // スタート地点のイベント処理
         if (startRoom.hasEnemy) {
-            appendColoredText("敵が現れた！\n", Color.BLACK);
+            appendColoredText("敵が現れた！\n", Color.RED);
             Enemy enemy = new Enemy("モンスター", player.level);
             enemies = new ArrayList<>();
             enemies.add(enemy);
@@ -703,7 +743,7 @@ public class RPGGameGUI extends JFrame {
             }
             appendColoredText(result + "\n", Color.YELLOW, 22);
         } else {
-            appendColoredText("何もない部屋だ。\n", Color.BLACK);
+            appendColoredText("何もない部屋だ。\n", Color.WHITE);
         }
         updateMapView();
 
@@ -736,7 +776,7 @@ public class RPGGameGUI extends JFrame {
         int newX = playerX + dx;
         int newY = playerY + dy;
         if (newX < 0 || newY < 0 || newX >= dungeonMap[0].length || newY >= dungeonMap.length) {
-            appendColoredText("これ以上進めません。\n", Color.BLACK);
+            appendColoredText("これ以上進めません。\n", Color.RED);
             return;
         }
         // ボス部屋に入る条件判定
@@ -767,7 +807,7 @@ public class RPGGameGUI extends JFrame {
             room.isVisited = true;
             // 通常部屋のイベント処理（宝箱・敵・落とし穴など）
             if (room.hasEnemy) {
-                appendColoredText("敵が現れた！\n", Color.BLACK, 22);
+                appendColoredText("敵が現れた！\n", Color.RED, 22);
                 Enemy enemy = new Enemy("モンスター", player.level);
                 enemies = new ArrayList<>();
                 enemies.add(enemy);
@@ -820,7 +860,7 @@ public class RPGGameGUI extends JFrame {
                 if (player.health < 0)
                     player.health = 0;
             } else {
-                appendColoredText("何もない部屋だ。\n", Color.BLACK);
+                appendColoredText("何もない部屋だ。\n", Color.WHITE);
             }
         } else {
             appendColoredText("既に訪れた部屋です。\n", Color.BLACK);
@@ -848,11 +888,11 @@ public class RPGGameGUI extends JFrame {
             try {
                 ImageIcon icon = new ImageIcon(imagePath);
                 Image img = icon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
-                enemyImageLabel.setIcon(new ImageIcon(img));
-                enemyImageLabel.setVisible(true);
+                goblinImageLabel.setIcon(new ImageIcon(img));
+                goblinImageLabel.setVisible(true);
             } catch (Exception e) {
-                enemyImageLabel.setIcon(null);
-                enemyImageLabel.setVisible(false);
+                goblinImageLabel.setIcon(null);
+                goblinImageLabel.setVisible(false);
             }
         }
     }
@@ -864,13 +904,13 @@ public class RPGGameGUI extends JFrame {
             actionPanel.setVisible(false);
             setActionButtonsEnabled(false);
             setMoveButtonsEnabled(false);
-            enemyImageLabel.setVisible(false); // ★画像非表示
+            goblinImageLabel.setVisible(false); // ★画像非表示
         } else if (enemies.isEmpty()) {
             appendColoredText(player.name + "はすべての敵を倒しました！\n", Color.BLUE);
             actionPanel.setVisible(false);
             setActionButtonsEnabled(false);
             setMoveButtonsEnabled(true);
-            enemyImageLabel.setVisible(false); // ★画像非表示
+            goblinImageLabel.setVisible(false); // ★画像非表示
 
             // ★ここから装備ドロップ処理
             Random rand = new Random();
@@ -998,11 +1038,51 @@ public class RPGGameGUI extends JFrame {
         return true;
     }
 
+    // キャラクター作成ダイアログを表示し、名前と職業を取得する
+    private static class CharacterCreationResult {
+        String name;
+        Job job;
+
+        CharacterCreationResult(String name, Job job) {
+            this.name = name;
+            this.job = job;
+        }
+    }
+
+    private static CharacterCreationResult showCharacterCreationDialog(Component parent) {
+        JPanel inputPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+        JTextField nameField = new JTextField();
+        JComboBox<String> jobBox = new JComboBox<>(new String[] { "騎士", "魔法使い" });
+        inputPanel.add(new JLabel("名前:"));
+        inputPanel.add(nameField);
+        inputPanel.add(new JLabel("職業:"));
+        inputPanel.add(jobBox);
+
+        int result = JOptionPane.showConfirmDialog(
+                parent, inputPanel, "キャラクター作成", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            String playerName = nameField.getText().trim();
+            if (playerName.isEmpty())
+                return null;
+            Job selectedJob = jobBox.getSelectedIndex() == 0 ? Job.騎士 : Job.魔法使い;
+            return new CharacterCreationResult(playerName, selectedJob);
+        }
+        return null;
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new RPGGameGUI().setVisible(true);
+        SwingUtilities.invokeLater(() -> {
+            // 1. キャラクター作成ダイアログを表示
+            CharacterCreationResult result = showCharacterCreationDialog(null);
+            if (result == null) {
+                // キャンセル時は終了
+                System.exit(0);
             }
+            // 2. ゲーム画面を生成し、キャラクター情報を反映
+            RPGGameGUI gui = new RPGGameGUI();
+            gui.setVisible(true);
+            gui.startGame(result.name, result.job);
         });
     }
 }
